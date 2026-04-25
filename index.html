@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Mafia — Party Game</title>
+<style>
+:root {
+  --bg: #0e0c14;
+  --surface: #1a1725;
+  --surface2: #231f30;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.15);
+  --text: #f0edf8;
+  --muted: #8c849e;
+  --accent: #c084fc;
+  --accent-dark: #7c3aed;
+  --red: #f87171;
+  --radius-sm: 8px;
+  --font-display: Georgia, serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; height: 100%; background: var(--bg); overflow: hidden; }
+body { font-family: var(--font-body); color: var(--text); display: flex; justify-content: center; }
+#app {
+  position: relative; width: 100%; max-width: 440px; height: 100%;
+  display: flex; flex-direction: column; overflow: hidden; background: var(--bg);
+}
+.blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.13; pointer-events: none; z-index: 0; }
+.blob1 { width: 260px; height: 260px; background: #7c3aed; top: -60px; right: -60px; }
+.blob2 { width: 200px; height: 200px; background: #be185d; bottom: 80px; left: -60px; }
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1; overflow-y: auto;
+}
+.screen.active { opacity: 1; pointer-events: all; z-index: 2; }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 14px 18px 10px; flex-shrink: 0; }
+.back-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--border2); background: var(--surface);
+  color: var(--muted); font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.back-btn:hover { background: var(--surface2); color: var(--text); }
+.page-title { font-size: 14px; color: var(--muted); font-weight: 500; }
+.body { flex: 1; padding: 16px 18px 8px; }
+.footer { padding: 8px 18px 32px; flex-shrink: 0; }
+.btn {
+  width: 100%; padding: 13px 18px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border2); background: var(--surface);
+  color: var(--text); font-family: var(--font-body);
+  font-size: 15px; font-weight: 500; cursor: pointer;
+  display: block; margin-bottom: 10px; text-align: center;
+  transition: background 0.15s, transform 0.1s;
+}
+.btn:active { transform: scale(0.98); }
+.btn:hover { background: var(--surface2); }
+.btn-primary { background: var(--accent-dark); border-color: var(--accent-dark); color: #fff; }
+.btn-primary:hover { background: #6d28d9; }
+.btn-ghost { background: transparent; color: var(--muted); border-color: var(--border); }
+.btn-ghost:hover { background: var(--surface); color: var(--text); }
+input[type=text] {
+  width: 100%; padding: 11px 13px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border2); background: var(--surface);
+  color: var(--text); font-family: var(--font-body); font-size: 15px; outline: none;
+}
+input[type=text]:focus { border-color: var(--accent); }
+input[type=text]::placeholder { color: var(--muted); }
+
+/* HOME */
+#s-home { justify-content: center; align-items: center; text-align: center; padding: 40px 32px; }
+.home-icon { width: 72px; height: 72px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 20px; }
+.home-title { font-family: var(--font-display); font-size: 42px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
+.home-sub { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 44px; }
+.home-btns { width: 100%; max-width: 300px; }
+
+/* HOW TO PLAY */
+.howto-step { display: flex; gap: 14px; margin-bottom: 20px; }
+.step-num { width: 26px; height: 26px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+.step-body h3 { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+.step-body p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+/* SETUP */
+.section-label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+.role-row { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); margin-bottom: 7px; }
+.role-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.role-name-text { flex: 1; font-size: 14px; font-weight: 500; }
+.counter { display: flex; align-items: center; }
+.cnt-btn { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.cnt-val { font-size: 14px; font-weight: 500; min-width: 26px; text-align: center; }
+.del-btn { width: 26px; height: 26px; border-radius: 6px; border: none; background: none; color: var(--muted); font-size: 13px; cursor: pointer; margin-left: 2px; display: flex; align-items: center; justify-content: center; }
+.del-btn:hover { color: var(--red); }
+.add-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.add-row input { flex: 1; }
+.add-row .btn { width: auto; margin: 0; padding: 11px 16px; }
+.summary-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; }
+.summary-total { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.summary-total span { color: var(--text); font-weight: 500; }
+.summary-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+.summary-pill { padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1px solid transparent; }
+.err-msg { font-size: 13px; color: var(--red); margin-bottom: 8px; display: none; }
+
+/* REVEAL */
+.progress-row { display: flex; align-items: center; gap: 4px; margin-bottom: 20px; }
+.prog-seg { height: 3px; border-radius: 2px; flex: 1; background: var(--border2); transition: background 0.3s; }
+.prog-seg.done, .prog-seg.active { background: var(--accent); }
+.prog-seg.active { opacity: 0.55; }
+.reveal-player-label { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+.reveal-heading { font-family: var(--font-display); font-size: 24px; font-weight: 600; }
+.card-zone { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px 18px; }
+.role-card { width: 100%; max-width: 320px; border-radius: 20px; border: 1px solid var(--border2); background: var(--surface); cursor: pointer; user-select: none; }
+.card-hidden-face { padding: 48px 24px 44px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.hold-ring-wrap { position: relative; width: 76px; height: 76px; margin-bottom: 18px; }
+.hold-ring-wrap svg { width: 76px; height: 76px; }
+.lock-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 24px; }
+.card-hold-label { font-size: 15px; font-weight: 500; margin-bottom: 5px; }
+.card-hold-hint { font-size: 12px; color: var(--muted); }
+.card-revealed-face { padding: 40px 24px 36px; text-align: center; display: none; border-radius: 20px; }
+.rv-icon { font-size: 56px; display: block; margin-bottom: 12px; }
+.rv-role-name { font-family: var(--font-display); font-size: 26px; font-weight: 700; margin-bottom: 10px; }
+.rv-badge { display: inline-block; padding: 4px 13px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1px solid transparent; margin-bottom: 14px; }
+.rv-desc { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+/* DONE */
+#s-done { justify-content: center; align-items: center; text-align: center; padding: 40px 28px; }
+.done-icon { font-size: 64px; margin-bottom: 16px; }
+.done-title { font-family: var(--font-display); font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+.done-sub { font-size: 14px; color: var(--muted); line-height: 1.6; max-width: 260px; margin: 0 auto 32px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+
+  <div class="screen active" id="s-home">
+    <div class="home-icon">🎭</div>
+    <div class="home-title">Mafia</div>
+    <div class="home-sub">Party Game</div>
+    <div class="home-btns">
+      <button class="btn btn-primary" onclick="goTo('s-setup')">Create game</button>
+      <button class="btn btn-ghost" onclick="goTo('s-howto')">How to play</button>
+    </div>
+  </div>
+
+  <div class="screen" id="s-howto">
+    <div class="topbar">
+      <button class="back-btn" onclick="goTo('s-home')">‹</button>
+      <span class="page-title">How to play</span>
+    </div>
+    <div class="body">
+      <div class="howto-step"><div class="step-num">1</div><div class="step-body"><h3>Create roles</h3><p>Add roles like Mafia, Villager, Detective — and set how many players get each one.</p></div></div>
+      <div class="howto-step"><div class="step-num">2</div><div class="step-body"><h3>Deal roles secretly</h3><p>Each player press-holds the card to reveal their secret role, then passes the phone.</p></div></div>
+      <div class="howto-step"><div class="step-num">3</div><div class="step-body"><h3>Night phase</h3><p>Everyone closes their eyes. Mafia silently picks someone to eliminate.</p></div></div>
+      <div class="howto-step"><div class="step-num">4</div><div class="step-body"><h3>Day phase</h3><p>Town debates and votes to eliminate a suspect.</p></div></div>
+      <div class="howto-step"><div class="step-num">5</div><div class="step-body"><h3>Win condition</h3><p>Town wins when all Mafia are gone. Mafia wins when they equal or outnumber Town.</p></div></div>
+    </div>
+    <div class="footer"><button class="btn btn-primary" onclick="goTo('s-home')">Got it</button></div>
+  </div>
+
+  <div class="screen" id="s-setup">
+    <div class="topbar">
+      <button class="back-btn" onclick="goTo('s-home')">‹</button>
+      <span class="page-title">Create game</span>
+    </div>
+    <div class="body">
+      <div class="section-label">Roles &amp; player counts</div>
+      <div id="role-list"></div>
+      <div class="add-row">
+        <input type="text" id="role-name-input" placeholder="Add a role (e.g. Joker)" maxlength="24"/>
+        <button class="btn" onclick="addRole()">Add</button>
+      </div>
+      <div class="summary-box">
+        <div class="summary-total">Total players: <span id="total-count">0</span></div>
+        <div class="summary-pills" id="role-summary"></div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="err-msg" id="setup-err"></div>
+      <button class="btn btn-primary" onclick="submitSetup()">Deal roles →</button>
+    </div>
+  </div>
+
+  <div class="screen" id="s-reveal">
+    <div class="topbar">
+      <button class="back-btn" onclick="goTo('s-setup')">‹</button>
+      <span class="page-title" id="reveal-page-label">Player 1 of 6</span>
+    </div>
+    <div class="body" style="flex:0;padding-bottom:0">
+      <div class="progress-row" id="progress-row"></div>
+      <div class="reveal-player-label" id="reveal-sub">Pass phone to player 1</div>
+      <div class="reveal-heading" id="reveal-heading">Your turn</div>
+    </div>
+    <div class="card-zone">
+      <div class="role-card" id="role-card"
+        onmousedown="startHold()" onmouseup="endHold()" onmouseleave="endHold()"
+        ontouchstart="startHold(event)" ontouchend="endHold()" ontouchcancel="endHold()">
+        <div class="card-hidden-face" id="card-hidden">
+          <div class="hold-ring-wrap">
+            <svg viewBox="0 0 76 76">
+              <circle cx="38" cy="38" r="32" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+              <circle id="hold-arc" cx="38" cy="38" r="32" fill="none" stroke="#c084fc" stroke-width="4" stroke-dasharray="0 201" stroke-dashoffset="50" stroke-linecap="round"/>
+            </svg>
+            <div class="lock-center">🔒</div>
+          </div>
+          <div class="card-hold-label">Press &amp; hold to reveal</div>
+          <div class="card-hold-hint">Keep your role secret!</div>
+        </div>
+        <div class="card-revealed-face" id="card-revealed">
+          <span class="rv-icon" id="rv-icon"></span>
+          <div class="rv-role-name" id="rv-title"></div>
+          <div class="rv-badge" id="rv-badge"></div>
+          <div class="rv-desc" id="rv-desc"></div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="btn btn-primary" id="next-btn" onclick="nextPlayer()" style="display:none">Next player →</button>
+      <p id="hide-hint" style="font-size:12px;color:var(--muted);text-align:center;line-height:1.6">Hold the card to reveal your role</p>
+    </div>
+  </div>
+
+  <div class="screen" id="s-done">
+    <div class="done-icon">🎉</div>
+    <div class="done-title">All roles dealt!</div>
+    <div class="done-sub">Everyone knows their role. Pick a moderator and start playing.</div>
+    <button class="btn btn-primary" style="max-width:260px" onclick="resetAndHome()">Play again</button>
+    <button class="btn btn-ghost" style="max-width:260px" onclick="goTo('s-home')">Back to home</button>
+  </div>
+</div>
+
+<script>
+const PALETTES=[
+  {dot:'#f87171',bg:'rgba(248,113,113,0.12)',text:'#fca5a5',border:'rgba(248,113,113,0.35)'},
+  {dot:'#c084fc',bg:'rgba(192,132,252,0.12)',text:'#d8b4fe',border:'rgba(192,132,252,0.35)'},
+  {dot:'#4ade80',bg:'rgba(74,222,128,0.12)', text:'#86efac',border:'rgba(74,222,128,0.35)'},
+  {dot:'#60a5fa',bg:'rgba(96,165,250,0.12)', text:'#93c5fd',border:'rgba(96,165,250,0.35)'},
+  {dot:'#fbbf24',bg:'rgba(251,191,36,0.12)', text:'#fde68a',border:'rgba(251,191,36,0.35)'},
+  {dot:'#f472b6',bg:'rgba(244,114,182,0.12)',text:'#f9a8d4',border:'rgba(244,114,182,0.35)'},
+  {dot:'#2dd4bf',bg:'rgba(45,212,191,0.12)', text:'#99f6e4',border:'rgba(45,212,191,0.35)'},
+  {dot:'#fb923c',bg:'rgba(251,146,60,0.12)', text:'#fdba74',border:'rgba(251,146,60,0.35)'},
+];
+const ICONS={mafia:'🔪',villager:'👤',detective:'🔍',doctor:'💉',godfather:'🕵',bodyguard:'🛡',joker:'🃏',sheriff:'⭐',witch:'🧙',hunter:'🏹',mayor:'👑'};
+const DESCS={
+  mafia:'You are Mafia. Each night, vote with your team to eliminate a villager. Blend in during the day.',
+  villager:'You are a Villager. No special power — use instincts to find and vote out the Mafia.',
+  detective:'Each night, investigate one player. The moderator tells you if they are Mafia or not.',
+  doctor:'Each night, choose one player to protect. Mafia cannot eliminate them that night.',
+  godfather:'You lead the Mafia. You appear innocent when the Detective investigates you.',
+  bodyguard:'Each night, protect one player. If Mafia targets them, you die in their place.',
+  joker:'Win alone. Get yourself eliminated by the Town vote — not by the Mafia.',
+  sheriff:'Each night, investigate one player to learn their true alignment.',
+  witch:'You have two potions: one to save, one to kill. Each can only be used once.',
+  hunter:'If eliminated, you may immediately shoot one other player.',
+  mayor:'Your vote counts double during the day. Keep your identity hidden.',
+};
+const DEFAULT_ROLES=[{name:'Mafia',count:2},{name:'Villager',count:4},{name:'Detective',count:1},{name:'Doctor',count:1}];
+
+let roles=DEFAULT_ROLES.map(r=>({...r}));
+let dealtRoles=[],currentPlayer=0,holdInterval=null,holdProgress=0,revealed=false;
+const HOLD_MS=900,CIRC=2*Math.PI*32;
+
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function resetAndHome(){roles=DEFAULT_ROLES.map(r=>({...r}));renderRoles();goTo('s-home');}
+function pal(i){return PALETTES[i%PALETTES.length];}
+function getIcon(name){const k=name.toLowerCase();for(const k2 in ICONS)if(k.includes(k2))return ICONS[k2];return'🎭';}
+function getDesc(name){const k=name.toLowerCase();for(const k2 in DESCS)if(k.includes(k2))return DESCS[k2];return"Play carefully. Work toward your team's victory without revealing yourself.";}
+
+function renderRoles(){
+  const list=document.getElementById('role-list');
+  list.innerHTML='';
+  let total=0;
+  roles.forEach((r,i)=>{
+    const c=pal(i);total+=r.count;
+    const d=document.createElement('div');
+    d.className='role-row';
+    d.innerHTML=`<div class="role-dot" style="background:${c.dot}"></div>
+      <span class="role-name-text">${r.name}</span>
+      <div class="counter">
+        <button class="cnt-btn" onclick="changeCount(${i},-1)">−</button>
+        <span class="cnt-val">${r.count}</span>
+        <button class="cnt-btn" onclick="changeCount(${i},1)">+</button>
+      </div>
+      <button class="del-btn" onclick="removeRole(${i})">✕</button>`;
+    list.appendChild(d);
+  });
+  document.getElementById('total-count').textContent=total;
+  document.getElementById('role-summary').innerHTML=roles.map((r,i)=>{
+    const c=pal(i);
+    return`<span class="summary-pill" style="background:${c.bg};color:${c.text};border-color:${c.border}">${r.name} × ${r.count}</span>`;
+  }).join('');
+}
+
+function addRole(){
+  const inp=document.getElementById('role-name-input');
+  const name=inp.value.trim();
+  if(!name)return;
+  if(roles.find(r=>r.name.toLowerCase()===name.toLowerCase())){inp.style.borderColor='#f87171';setTimeout(()=>inp.style.borderColor='',1200);return;}
+  roles.push({name,count:1});inp.value='';renderRoles();
+}
+function changeCount(i,d){roles[i].count=Math.max(0,roles[i].count+d);if(!roles[i].count)roles.splice(i,1);renderRoles();}
+function removeRole(i){roles.splice(i,1);renderRoles();}
+
+function submitSetup(){
+  const err=document.getElementById('setup-err');
+  const total=roles.reduce((s,r)=>s+r.count,0);
+  if(!roles.length){err.textContent='Add at least one role.';err.style.display='block';return;}
+  if(total<2){err.textContent='Need at least 2 players total.';err.style.display='block';return;}
+  err.style.display='none';
+  dealtRoles=[];
+  roles.forEach((r,idx)=>{for(let i=0;i<r.count;i++)dealtRoles.push({...r,pi:idx});});
+  dealtRoles.sort(()=>Math.random()-0.5);
+  currentPlayer=0;revealed=false;
+  setupReveal();goTo('s-reveal');
+}
+
+function setupReveal(){
+  const total=dealtRoles.length,idx=currentPlayer;
+  document.getElementById('reveal-page-label').textContent=`Player ${idx+1} of ${total}`;
+  document.getElementById('reveal-sub').textContent=`Pass the phone to player ${idx+1}`;
+  document.getElementById('reveal-heading').textContent='Your turn';
+  document.getElementById('progress-row').innerHTML=dealtRoles.map((_,i)=>{
+    let cls='prog-seg';if(i<idx)cls+=' done';else if(i===idx)cls+=' active';
+    return`<div class="${cls}"></div>`;
+  }).join('');
+  document.getElementById('card-hidden').style.display='flex';
+  document.getElementById('card-revealed').style.display='none';
+  document.getElementById('next-btn').style.display='none';
+  document.getElementById('hide-hint').textContent='Hold the card to reveal your role';
+  document.getElementById('role-card').style.borderColor='rgba(255,255,255,0.15)';
+  const arc=document.getElementById('hold-arc');
+  if(arc)arc.setAttribute('stroke-dasharray',`0 ${CIRC}`);
+  holdProgress=0;revealed=false;
+}
+
+function startHold(e){
+  if(revealed)return;
+  if(e)e.preventDefault();
+  holdProgress=0;clearInterval(holdInterval);
+  const start=Date.now();
+  holdInterval=setInterval(()=>{
+    holdProgress=Math.min(1,(Date.now()-start)/HOLD_MS);
+    const arc=document.getElementById('hold-arc');
+    if(arc){const l=holdProgress*CIRC;arc.setAttribute('stroke-dasharray',`${l} ${CIRC-l}`);}
+    if(holdProgress>=1){clearInterval(holdInterval);holdInterval=null;showRole();}
+  },16);
+}
+function endHold(){
+  if(revealed)return;
+  clearInterval(holdInterval);holdInterval=null;holdProgress=0;
+  const arc=document.getElementById('hold-arc');
+  if(arc)arc.setAttribute('stroke-dasharray',`0 ${CIRC}`);
+}
+function showRole(){
+  if(revealed)return;revealed=true;
+  const r=dealtRoles[currentPlayer],c=pal(r.pi);
+  document.getElementById('card-hidden').style.display='none';
+  const face=document.getElementById('card-revealed');
+  face.style.display='block';face.style.background=c.bg;
+  document.getElementById('role-card').style.borderColor=c.border;
+  document.getElementById('rv-icon').textContent=getIcon(r.name);
+  const t=document.getElementById('rv-title');t.textContent=r.name;t.style.color=c.text;
+  const b=document.getElementById('rv-badge');b.textContent=r.name;b.style.background=c.bg;b.style.color=c.text;b.style.borderColor=c.border;
+  document.getElementById('rv-desc').textContent=getDesc(r.name);
+  document.getElementById('next-btn').style.display='block';
+  document.getElementById('hide-hint').textContent='Remember your role, then pass the phone';
+}
+function nextPlayer(){
+  currentPlayer++;
+  if(currentPlayer>=dealtRoles.length){goTo('s-done');return;}
+  revealed=false;setupReveal();
+}
+
+document.getElementById('role-name-input').addEventListener('keydown',e=>{if(e.key==='Enter')addRole();});
+renderRoles();
+</script>
+</body>
+</html>
